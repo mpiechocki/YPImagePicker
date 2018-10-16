@@ -35,16 +35,7 @@ public class YPLibraryVC: UIViewController, YPPermissionCheckable {
     
     func setAlbum(_ album: YPAlbum) {
         mediaManager.collection = album.collection
-        resetMultipleSelection()
-    }
-    
-    private func resetMultipleSelection() {
-        selection.removeAll()
         currentlySelectedIndex = 0
-        multipleSelectionEnabled = false
-        v.assetViewContainer.setMultipleSelectionMode(on: false)
-        delegate?.libraryViewDidToggleMultipleSelection(enabled: false)
-        checkLimit()
     }
     
     func initialize() {
@@ -144,11 +135,13 @@ public class YPLibraryVC: UIViewController, YPPermissionCheckable {
 
         if multipleSelectionEnabled {
             if selection.isEmpty {
+                let asset = mediaManager.fetchResult[currentlySelectedIndex]
                 selection = [
                     YPLibrarySelection(index: currentlySelectedIndex,
                                        cropRect: v.currentCropRect(),
                                        scrollViewContentOffset: v.assetZoomableView!.contentOffset,
-                                       scrollViewZoomScale: v.assetZoomableView!.zoomScale)
+                                       scrollViewZoomScale: v.assetZoomableView!.zoomScale,
+                                       assetIdentifier: asset.localIdentifier)
                 ]
             }
         } else {
@@ -394,7 +387,8 @@ public class YPLibraryVC: UIViewController, YPPermissionCheckable {
             // Multiple selection
             if self.multipleSelectionEnabled && self.selection.count > 1 {
                 let selectedAssets: [(asset: PHAsset, cropRect: CGRect?)] = self.selection.map {
-                    return (self.mediaManager.fetchResult[$0.index], $0.cropRect)
+                    guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [$0.assetIdentifier], options: PHFetchOptions()).firstObject else { fatalError() }
+                    return (asset, $0.cropRect)
                 }
                 
                 // Check video length
